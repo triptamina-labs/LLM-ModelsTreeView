@@ -127,7 +127,10 @@
       start += frac;
     });
 
-    var pos = {}, ringSpacing = 200;
+    var pos = {};
+    // Eje temporal en el radio: año → distancia al centro (2017 = centro, más nuevo = más afuera)
+    var minYear = 2017, yearSpacing = 95;
+    function yearOf(id) { return parseInt((byId[id].date || "2017").split("-")[0], 10) || 2017; }
     roots.forEach(function (r) { pos[r] = { x: 0, y: 0 }; });
 
     // preorden por rama para mantener cada linaje contiguo (menos cruces)
@@ -142,20 +145,20 @@
     var posInSeq = {};
     seq.forEach(function (id, i) { posInSeq[id] = i; });
 
-    // colocar nodos por (familia, profundidad), distribuidos en el sector
-    var depthNodes = {};
+    // colocar nodos por (familia, año): radio = tiempo, ángulo = sector
+    var bucket = {};
     models.forEach(function (m) {
       var b = nodesBranch[m.id];
       if (b === "__ROOT__") return;
-      var k = b + "|" + depth[m.id];
-      (depthNodes[k] = depthNodes[k] || []).push(m.id);
+      var k = b + "|" + yearOf(m.id);
+      (bucket[k] = bucket[k] || []).push(m.id);
     });
-    Object.keys(depthNodes).forEach(function (k) {
-      var parts = k.split("|"), b = parts[0], d = +parts[1];
-      var ids = depthNodes[k].sort(function (a, c) { return posInSeq[a] - posInSeq[c]; });
+    Object.keys(bucket).forEach(function (k) {
+      var parts = k.split("|"), b = parts[0], yr = +parts[1];
+      var ids = bucket[k].sort(function (a, c) { return posInSeq[a] - posInSeq[c]; });
       var n = ids.length, span = spans[b];
       ids.forEach(function (id, i) {
-        var radius = d * ringSpacing;
+        var radius = (yr - minYear) * yearSpacing;
         var ang = span.start + ((i + 0.5) / n) * (span.end - span.start);
         pos[id] = { x: Math.cos(ang) * radius, y: Math.sin(ang) * radius };
       });
