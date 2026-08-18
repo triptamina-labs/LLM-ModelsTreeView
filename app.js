@@ -1,182 +1,189 @@
-/* Genealogía de modelos LLM — visor "genético" con vis-network */
+/* Genealogía de modelos LLM — visor "genético" con Cytoscape.js */
 (function () {
   "use strict";
 
   var DATA = window.LLM_MODELS;
   var companies = DATA.companies;
   var models = DATA.models;
-
   var byId = {};
   models.forEach(function (m) { byId[m.id] = m; });
 
-  var networkEl = document.getElementById("network");
-  var network = null;
-  var nodesDS = new vis.DataSet([]);
-  var edgesDS = new vis.DataSet([]);
+  var MIN_YEAR = 2017;
+  function yearOf(id) { return parseInt((byId[id].date || "2017").split("-")[0], 10) || MIN_YEAR; }
+  function cColor(c) { return (companies[c] && companies[c].color) || "#888888"; }
 
-  var REL = {
-    invoked: "desciende de",
-    base: "desciende de",
-    inspirado: "inspirado en"
-  };
+  /* ---------- Theme ---------- */
+  function readVar(name, fb) { return getComputedStyle(document.body).getPropertyValue(name).trim() || fb; }
+  function textColor() { return readVar("--text", "#1d1d1f"); }
+  function edgeColor() { return readVar("--muted", "#6e6e73"); }
 
-  function relLabel(parentId) {
-    // Determina la etiqueta de relación hacia el padre.
-    // Simple: 'desciende de' salvo notas de inspiración.
-    return "desciende de";
-  }
-
-  function makeNodes() {
-    return models.map(function (m) {
-      var c = companies[m.company] || { color: "#888" };
-      return {
-        id: m.id,
-        label: m.name,
-        title: m.name,
-        color: { background: c.color, border: c.color, highlight: { background: c.color, border: "#000" } },
-        font: { color: getComputedStyle(document.body).getPropertyValue("--text").trim() || "#000", size: 13, face: "-apple-system, 'SF Pro Text', Segoe UI, Roboto, sans-serif" },
-        shape: "box",
-        borderWidth: 2,
-        margin: { top: 6, right: 10, bottom: 6, left: 10 },
-        model: m
-      };
-    });
-  }
-
-  function makeEdges() {
-    var edges = [];
-    models.forEach(function (m) {
-      (m.parents || []).forEach(function (p, i) {
-        edges.push({
-          id: m.id + "_" + p + "_" + i,
-          from: p,
-          to: m.id,
-          arrows: "to",
-          color: { color: "#b0b0b8", highlight: "#888" },
-          width: 1.4,
-          smooth: { enabled: true, type: "cubicBezier", forceDirection: "horizontal" }
-        });
-      });
-    });
-    return edges;
-  }
-
-  function readVar(name, fallback) {
-    var v = getComputedStyle(document.body).getPropertyValue(name).trim();
-    return v || fallback;
-  }
-
-  function themeColors() {
+  /* ---------- Elements ---------- */
+  var nodes = models.map(function (m) {
     return {
-      text: readVar("--text", "#1d1d1f"),
-      bg: readVar("--network-bg", "#ffffff"),
-      edge: readVar("--muted", "#6e6e73")
+      data: {
+        id: m.id, label: m.name, company: m.company, type: m.type,
+        date: m.date, year: yearOf(m.id), level: yearOf(m.id) - MIN_YEAR,
+        color: cColor(m.company), params: m.params || null, note: m.note || ""
+      }
     };
+  });
+  var edges = [];
+  models.forEach(function (m) {
+    (m.parents || []).forEach(function (p) {
+      edges.push({ data: { id: m.id + "->" + p, source: p, target: m.id } });
+    });
+  });
+
+  var cy = cytoscape({
+    container: document.getElementById("cy"),
+    elements: { nodes: nodes, edges: edges },
+    style: [
+      {
+        selector: "node",
+        style: {
+          "background-color": "data(color)", "background-opacity": 0.16,
+          "border-color": "data(color)", "border-width": 2,
+          label: "data(label)", color: textColor(),
+          "font-size": 10.5, "font-family": "-apple-system, 'SF Pro Text', Segoe UI, Roboto, sans-serif",
+          "font-weight": 600, "text-valign": "center", "text-halign": "center",
+          shape: "round-rectangle",
+          width: "label", height: "label", padding: "6px",
+          "overlay-opacity": 0, "overlay-padding": 6
+        }
+      },
+      { selector: "node:selected", style: { "border-width": 3, "overlay-opacity": 0.08, "overlay-color": "#000" } },
+      {
+        selector: "edge",
+        style: {
+          width: 1.3, "line-color": edgeColor(), "target-arrow-color": edgeColor(),
+          "target-arrow-shape": "triangle", "arrow-scale": 0.55,
+          "curve-style": "bezier", opacity: 0.5
+        }
+      },
+      { selector: "node.hl", style: { "background-opacity": 0.32 } }
+    ],
+    wheelSensitivity: 0.2,
+    layout: { name: "cose", animate: false }
+  });
+
+  cy.fit(undefined, 50);
+
+  /* ---------- Layouts ---------- */
+  function runLayout(name) {
+    if (name === "sectores") { applySectors(); return; }
+    cy.stop();
+    var opts = { animate: false, name: name };
+    if (name === "concentric") {
+      opts.level = function (n) { return n.data("level"); };
+      opts.minNodeSpacing = 70; opts.avoidOverlap = true;
+      opts.nodeDimensionsIncludeLabels = true;
+    } else if (name === "cose") {
+      opts.randomize = false; opts.quality = "default";
+      opts.nodeRepulsion = 9000; opts.idealEdgeLength = 115;
+      opts.edgeElasticity = 0.45; opts.gravity = 0.6; opts.numIter = 3000;
+      opts.nodeOverlap = 25;
+    }
+    cy.layout(opts).run();
+    cy.fit(undefined, 50);
   }
 
-  /* Layout circular: Transformer (raíz) al centro, el resto en anillos
-     concéntricos por profundidad (BFS). Cada generación en su radio. */
-  function circularPositions() {
+  /* Layout de sectores por familia + radio temporal (hecho a mano) */
+  function applySectors() {
     var childMap = {};
     models.forEach(function (m) {
-      (m.parents || []).forEach(function (p) {
-        (childMap[p] = childMap[p] || []).push(m.id);
-      });
+      (m.parents || []).forEach(function (p) { (childMap[p] = childMap[p] || []).push(m.id); });
     });
-    var roots = models.filter(function (m) {
-      return !m.parents || !m.parents.length;
-    }).map(function (m) { return m.id; });
+    var roots = models.filter(function (m) { return !m.parents || !m.parents.length; }).map(function (m) { return m.id; });
+    var rootSet = {}; roots.forEach(function (r) { rootSet[r] = true; });
 
-    // BFS: profundidad = max(profundidad de parents)+1
-    var depth = {};
-    var queue = [];
-    roots.forEach(function (r) { depth[r] = 0; queue.push(r); });
-    var qi = 0;
-    while (qi < queue.length) {
-      var id = queue[qi++], d = depth[id];
-      (childMap[id] || []).forEach(function (c) {
-        if (depth[c] === undefined || d + 1 > depth[c]) {
-          depth[c] = d + 1; queue.push(c);
-        }
-      });
+    function branchOf(id, memo) {
+      if (memo[id] !== undefined) return memo[id];
+      var m = byId[id];
+      if (!m.parents || !m.parents.length) { memo[id] = "__ROOT__"; return "__ROOT__"; }
+      if (m.parents.some(function (p) { return rootSet[p]; })) { memo[id] = id; return id; }
+      memo[id] = branchOf(m.parents[0], memo); return memo[id];
     }
 
-    // agrupar por anillo
-    var rings = {};
+    var brCounts = {}, nb = {};
     models.forEach(function (m) {
-      (rings[depth[m.id]] = rings[depth[m.id]] || []).push(m.id);
+      var b = branchOf(m.id, {}); nb[m.id] = b;
+      if (b !== "__ROOT__") brCounts[b] = (brCounts[b] || 0) + 1;
+    });
+    var brIds = Object.keys(brCounts).sort();
+    var total = brIds.reduce(function (s, b) { return s + brCounts[b]; }, 0) || 1;
+    var spans = {}, start = 0;
+    brIds.forEach(function (b) {
+      var frac = (brCounts[b] / total) * 2 * Math.PI;
+      spans[b] = { start: start, end: start + frac }; start += frac;
     });
 
-    var ringSpacing = 210, inner = 0, maxRing = 0;
-    Object.keys(rings).forEach(function (k) { maxRing = Math.max(maxRing, +k); });
-    var pos = {};
-    Object.keys(rings).forEach(function (ks) {
-      var d = +ks, ids = rings[ks];
-      var radius = inner + d * ringSpacing;
-      // cluster por empresa/nombre para agrupar familias
-      ids.sort(function (a, b) {
-        var A = byId[a], B = byId[b];
-        return (A.company + "|" + A.name).localeCompare(B.company + "|" + B.name);
-      });
-      var n = ids.length;
+    var seq = [];
+    function preorder(n, b) {
+      (childMap[n] || []).slice().sort().forEach(function (c) { if (nb[c] === b) preorder(c, b); });
+      seq.push(n);
+    }
+    brIds.forEach(function (b) { preorder(b, b); });
+    var posInSeq = {}; seq.forEach(function (id, i) { posInSeq[id] = i; });
+
+    var yearSpacing = 95;
+    var bucket = {};
+    models.forEach(function (m) {
+      var b = nb[m.id]; if (b === "__ROOT__") return;
+      var k = b + "|" + yearOf(m.id); (bucket[k] = bucket[k] || []).push(m.id);
+    });
+    var positions = {};
+    roots.forEach(function (r) { positions[r] = { x: 0, y: 0 }; });
+    Object.keys(bucket).forEach(function (k) {
+      var parts = k.split("|"), b = parts[0], yr = +parts[1];
+      var ids = bucket[k].sort(function (a, c) { return posInSeq[a] - posInSeq[c]; });
+      var n = ids.length, span = spans[b];
       ids.forEach(function (id, i) {
-        var angle = -Math.PI / 2 + (2 * Math.PI * i) / n + (d % 2 ? Math.PI / n : 0);
-        pos[id] = { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius };
+        var radius = (yr - MIN_YEAR) * yearSpacing;
+        var ang = span.start + ((i + 0.5) / n) * (span.end - span.start);
+        positions[id] = { x: Math.cos(ang) * radius, y: Math.sin(ang) * radius };
       });
     });
-    return pos;
+    cy.batch(function () {
+      cy.nodes().forEach(function (n) { if (positions[n.id()]) n.position(positions[n.id()]); });
+    });
+    cy.fit(undefined, 50);
   }
 
-  function buildNetwork() {
-    var t = themeColors();
-    nodesDS.clear();
-    edgesDS.clear();
-    var pos = circularPositions();
-    makeNodes().forEach(function (n) {
-      n.x = pos[n.id].x;
-      n.y = pos[n.id].y;
-      n.font.color = t.text;
-      nodesDS.add(n);
+  /* ---------- Layout selector ---------- */
+  var layoutBtns = document.querySelectorAll("#layouts .lbtn");
+  var currentLayout = "cose";
+  layoutBtns.forEach(function (b) {
+    b.addEventListener("click", function () {
+      layoutBtns.forEach(function (x) { x.classList.remove("active"); });
+      b.classList.add("active");
+      currentLayout = b.getAttribute("data-layout");
+      runLayout(currentLayout);
     });
-    edgesDS.add(makeEdges());
+  });
+  layoutBtns[0].classList.add("active");
 
-    var options = {
-      autoResize: true,
-      layout: { randomSeed: 2 },
-      physics: false,
-      interaction: { hover: true, tooltipDelay: 0 },
-      nodes: { shape: "box" },
-      edges: { smooth: { enabled: true, type: "cubicBezier" } },
-      groups: {}
-    };
-
-    network = new vis.Network(networkEl, { nodes: nodesDS, edges: edgesDS }, options);
-
-    network.on("click", function (params) {
-      if (params.nodes && params.nodes.length) {
-        showDetail(params.nodes[0]);
-      } else {
-        hideDetail();
-      }
+  // Deep-link por hash: #cose | #concentric | #sectores
+  var wantLayout = (location.hash || "").replace("#", "");
+  if (["cose", "concentric", "sectores"].indexOf(wantLayout) > -1) {
+    layoutBtns.forEach(function (x) {
+      x.classList.toggle("active", x.getAttribute("data-layout") === wantLayout);
     });
-    network.on("oncontext", function () { hideDetail(); });
+    currentLayout = wantLayout;
+    setTimeout(function () { runLayout(currentLayout); }, 60);
   }
 
   /* ---------- Detalle ---------- */
   var detailEl = document.getElementById("detail");
-
   function showDetail(id) {
-    var m = byId[id];
-    if (!m) return;
-    var c = companies[m.company] || { color: "#888" };
+    var m = byId[id]; if (!m) return;
+    var c = cColor(m.company);
     var parents = (m.parents || []).map(function (p) {
       var pp = byId[p];
       return pp ? '<span style="cursor:pointer" data-jump="' + p + '">' + pp.name + "</span>" : p;
     }).join(", ");
-
     detailEl.innerHTML =
       '<button class="close" id="dclose">✕</button>' +
-      '<div class="company"><span class="dot" style="background:' + c.color + '"></span>' + m.company + "</div>" +
+      '<div class="company"><span class="dot" style="background:' + c + '"></span>' + m.company + "</div>" +
       '<h2>' + m.name + "</h2>" +
       (m.params ? '<div class="row">Parámetros: <b>' + m.params + "</b></div>" : "") +
       '<div class="row">Fecha: <b>' + m.date + "</b></div>" +
@@ -184,18 +191,20 @@
       (parents ? '<div class="from">Desciende de: <b>' + parents + "</b></div>" : '<div class="from">Arquitectura raíz</div>') +
       (m.note ? '<div class="note">' + m.note + "</div>" : "");
     detailEl.style.display = "block";
-
-    detailEl.querySelector('[data-jump]') && detailEl.querySelector('[data-jump]').addEventListener("click", function (e) {
+    var jump = detailEl.querySelector('[data-jump]');
+    if (jump) jump.addEventListener("click", function (e) {
       e.stopPropagation();
-      var target = e.target.getAttribute("data-jump");
-      network.focus(target, { scale: 1.0 });
-      network.selectNodes([target]);
-      showDetail(target);
+      var t = e.target.getAttribute("data-jump");
+      cy.$("#" + t).select().panTo({ x: 0, y: 0 });
+      cy.animate({ center: { eles: cy.$("#" + t) }, duration: 250 });
+      showDetail(t);
     });
     detailEl.querySelector("#dclose").addEventListener("click", hideDetail);
   }
-
   function hideDetail() { detailEl.style.display = "none"; }
+
+  cy.on("tap", "node", function (evt) { showDetail(evt.target.id()); });
+  cy.on("tap", function (evt) { if (evt.target === cy) hideDetail(); });
 
   /* ---------- Filtros ---------- */
   var searchEl = document.getElementById("search");
@@ -206,62 +215,42 @@
   function fillFilters() {
     var comps = {}, types = {}, years = {};
     models.forEach(function (m) {
-      comps[m.company] = true;
-      types[m.type] = true;
-      var y = m.date.split("-")[0];
-      years[y] = true;
+      comps[m.company] = true; types[m.type] = true; years[m.date.split("-")[0]] = true;
     });
-    Object.keys(comps).sort().forEach(function (k) {
-      var o = document.createElement("option");
-      o.value = k; o.text = k; fCompany.appendChild(o);
-    });
-    Object.keys(types).sort().forEach(function (k) {
-      var o = document.createElement("option");
-      o.value = k; o.text = k; fType.appendChild(o);
-    });
-    Object.keys(years).sort().forEach(function (k) {
-      var o = document.createElement("option");
-      o.value = k; o.text = k; fYear.appendChild(o);
-    });
+    Object.keys(comps).sort().forEach(function (k) { fCompany.add(new Option(k, k)); });
+    Object.keys(types).sort().forEach(function (k) { fType.add(new Option(k, k)); });
+    Object.keys(years).sort().forEach(function (k) { fYear.add(new Option(k, k)); });
   }
 
   function applyFilter() {
     var q = searchEl.value.trim().toLowerCase();
     var fc = fCompany.value, ft = fType.value, fy = fYear.value;
-    var visible = {};
+    var vis = {};
     models.forEach(function (m) {
-      var matchQ = !q || m.name.toLowerCase().indexOf(q) !== -1;
-      var matchC = !fc || m.company === fc;
-      var matchT = !ft || m.type === ft;
-      var matchY = !fy || m.date.split("-")[0] === fy;
-      if (matchQ && matchC && matchT && matchY) visible[m.id] = true;
+      var okQ = !q || m.name.toLowerCase().indexOf(q) !== -1;
+      var okC = !fc || m.company === fc;
+      var okT = !ft || m.type === ft;
+      var okY = !fy || m.date.split("-")[0] === fy;
+      if (okQ && okC && okT && okY) vis[m.id] = true;
     });
-
-    // Mostrar también los ancestros de los visibles para no romper el árbol.
     var changed = true;
     while (changed) {
       changed = false;
-      Object.keys(visible).forEach(function (id) {
-        (byId[id].parents || []).forEach(function (p) {
-          if (!visible[p]) { visible[p] = true; changed = true; }
-        });
+      Object.keys(vis).forEach(function (id) {
+        (byId[id].parents || []).forEach(function (p) { if (!vis[p]) { vis[p] = true; changed = true; } });
       });
     }
-
-    var visIds = Object.keys(visible);
-    nodesDS.forEach(function (n) {
-      nodesDS.update({ id: n.id, hidden: !visible[n.id] });
+    cy.batch(function () {
+      cy.nodes().forEach(function (n) {
+        n.style("display", vis[n.id()] ? "element" : "none");
+      });
+      cy.edges().forEach(function (e) {
+        var s = vis[e.source().id()] && vis[e.target().id()];
+        e.style("display", s ? "element" : "none");
+      });
     });
-    edgesDS.forEach(function (e) {
-      var show = visible[e.from] && visible[e.to];
-      edgesDS.update({ id: e.id, hidden: !show });
-    });
-    document.getElementById("count").textContent = visIds.length + " / " + models.length;
-
-    if (network) {
-      network.redraw();
-      network.fit({ animation: true });
-    }
+    document.getElementById("count").textContent = Object.keys(vis).length + " / " + models.length;
+    cy.fit(undefined, 50);
   }
 
   [searchEl, fCompany, fType, fYear].forEach(function (el) {
@@ -278,16 +267,30 @@
     });
     legend.innerHTML = html;
   }
+  function refreshTheme() {
+    cy.batch(function () {
+      cy.nodes().forEach(function (n) {
+        n.style("color", textColor());
+        n.style("border-color", n.data("color"));
+        n.style("background-color", n.data("color"));
+        n.style("background-opacity", 0.16);
+      });
+      cy.edges().forEach(function (e) {
+        e.style("line-color", edgeColor());
+        e.style("target-arrow-color", edgeColor());
+      });
+    });
+    cy.style().update();
+  }
 
   document.getElementById("theme").addEventListener("click", function () {
     document.body.classList.toggle("dark");
-    buildNetwork();
-    applyFilter();
+    refreshTheme();
+    cy.fit(undefined, 50);
   });
 
   /* ---------- Init ---------- */
   buildLegend();
   fillFilters();
-  buildNetwork();
   applyFilter();
 })();

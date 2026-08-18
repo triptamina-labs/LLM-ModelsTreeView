@@ -12,124 +12,70 @@
       --muted: #6e6e73;
       --border: rgba(0,0,0,0.08);
       --accent: #0071e3;
-      --network-bg: #ffffff;
+      --net: #ffffff;
     }
     @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #000000;
-        --panel: #1d1d1f;
-        --text: #f5f5f7;
-        --muted: #86868b;
-        --border: rgba(255,255,255,0.12);
-        --accent: #2997ff;
-        --network-bg: #0a0a0a;
-      }
+      :root { --bg:#000; --panel:#1d1d1f; --text:#f5f5f7; --muted:#86868b; --border:rgba(255,255,255,.12); --accent:#2997ff; --net:#0a0a0a; }
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body.dark {
-      --bg: #000000;
-      --panel: #1d1d1f;
-      --text: #f5f5f7;
-      --muted: #86868b;
-      --border: rgba(255,255,255,0.12);
-      --accent: #2997ff;
-      --network-bg: #0a0a0a;
+      --bg:#000; --panel:#1d1d1f; --text:#f5f5f7; --muted:#86868b; --border:rgba(255,255,255,.12); --accent:#2997ff; --net:#0a0a0a;
     }
     html, body { height: 100%; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      display: flex;
-      flex-direction: column;
-      transition: background 0.2s, color 0.2s;
+      background: var(--bg); color: var(--text);
+      display: flex; flex-direction: column;
+      transition: background .2s, color .2s;
     }
     header {
-      padding: 14px 20px;
-      background: var(--panel);
+      padding: 12px 20px; background: var(--panel);
       border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
-      -webkit-backdrop-filter: saturate(180%) blur(20px);
-      backdrop-filter: saturate(180%) blur(20px);
-      position: sticky;
-      top: 0;
-      z-index: 10;
+      display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+      -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+      position: sticky; top: 0; z-index: 10;
     }
-    h1 {
-      font-size: 17px;
-      font-weight: 600;
-      letter-spacing: -0.01em;
-      white-space: nowrap;
-    }
-    h1 small { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 8px; }
-    .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-left: auto; }
+    h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; }
+    h1 small { color: var(--muted); font-weight: 400; font-size: 12px; margin-left: 8px; }
+    .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-left: auto; }
     input, select {
-      font: inherit;
-      font-size: 14px;
-      color: var(--text);
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 7px 12px;
-      outline: none;
-      transition: border 0.15s, box-shadow 0.15s;
+      font: inherit; font-size: 13px; color: var(--text); background: var(--bg);
+      border: 1px solid var(--border); border-radius: 9px; padding: 6px 10px; outline: none;
+      transition: border .15s, box-shadow .15s;
     }
-    input:focus, select:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
-    }
-    #search { width: 200px; }
+    input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+    #search { width: 170px; }
     select { cursor: pointer; }
-    .btn {
-      font: inherit; font-size: 13px; font-weight: 500;
-      color: var(--text);
-      background: transparent;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 7px 12px;
-      cursor: pointer;
-      transition: background 0.15s;
+    .btn, .lbtn {
+      font: inherit; font-size: 12px; font-weight: 500;
+      color: var(--text); background: transparent; border: 1px solid var(--border);
+      border-radius: 9px; padding: 6px 10px; cursor: pointer; transition: background .15s, border-color .15s;
     }
-    .btn:hover { background: var(--border); }
-    #legend {
-      display: flex; align-items: center; gap: 8px;
-      font-size: 12px; color: var(--muted);
-      flex-wrap: wrap;
-    }
-    .lg { display: inline-flex; align-items: center; gap: 5px; margin-right: 6px; }
-    .sw { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+    .btn:hover, .lbtn:hover { background: var(--border); }
+    .lbtn.active { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+    .seg { display: flex; gap: 4px; }
+    #legend { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); flex-wrap: wrap; }
+    .lg { display: inline-flex; align-items: center; gap: 4px; margin-right: 4px; }
+    .sw { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
     main { flex: 1; position: relative; min-height: 0; }
-    #network {
-      width: 100%; height: 100%;
-      background: var(--network-bg);
-    }
+    #cy { position: absolute; inset: 0; background: var(--net); }
     #detail {
-      position: fixed;
-      right: 16px; top: 76px;
-      width: 260px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-      box-shadow: 0 12px 40px rgba(0,0,0,0.18);
-      -webkit-backdrop-filter: saturate(180%) blur(20px);
-      backdrop-filter: saturate(180%) blur(20px);
-      display: none;
-      z-index: 20;
+      position: fixed; right: 14px; top: 70px; width: 252px;
+      background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 15px;
+      box-shadow: 0 12px 40px rgba(0,0,0,.18);
+      -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+      display: none; z-index: 20;
     }
-    #detail .company { font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
-    #detail .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
-    #detail h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; margin: 2px 0 6px; }
-    #detail .row { font-size: 13px; color: var(--muted); margin: 3px 0; }
+    #detail .company { font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+    #detail .dot { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+    #detail h2 { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; margin: 2px 0 6px; }
+    #detail .row { font-size: 12px; color: var(--muted); margin: 3px 0; }
     #detail .row b { color: var(--text); font-weight: 600; }
-    #detail .note { font-size: 13px; margin-top: 8px; line-height: 1.5; }
-    #detail .from { font-size: 12px; color: var(--muted); margin-top: 8px; line-height: 1.6; }
-    #detail .close { position: absolute; top: 10px; right: 12px; cursor: pointer; color: var(--muted); font-size: 16px; background:none; border:none; }
-    #count { font-size: 12px; color: var(--muted); margin-left: 4px; }
-    .hint { font-size: 12px; color: var(--muted); margin-left: 8px; }
+    #detail .note { font-size: 12px; margin-top: 8px; line-height: 1.5; }
+    #detail .from { font-size: 11px; color: var(--muted); margin-top: 8px; line-height: 1.6; }
+    #detail .close { position: absolute; top: 10px; right: 12px; cursor: pointer; color: var(--muted); font-size: 15px; background: none; border: none; }
+    #count { font-size: 11px; color: var(--muted); margin-left: 4px; }
+    #crumb { font-size: 11px; color: var(--muted); }
   </style>
 </head>
 <body>
@@ -140,15 +86,20 @@
       <select id="fCompany"><option value="">Todas las empresas</option></select>
       <select id="fType"><option value="">Todos los tipos</option></select>
       <select id="fYear"><option value="">Todos los años</option></select>
+      <span class="seg" id="layouts">
+        <button class="lbtn" data-layout="cose" title="Force: sin solapamiento">⚛ Fuerzas</button>
+        <button class="lbtn" data-layout="concentric" title="Radio = año">◯ Años</button>
+        <button class="lbtn" data-layout="sectores" title="Sectores por familia">◔ Familias</button>
+      </span>
       <span class="hint" id="legend"></span>
       <button class="btn" id="theme" title="Cambiar tema">◐</button>
     </div>
   </header>
   <main>
-    <div id="network"></div>
+    <div id="cy"></div>
   </main>
   <aside id="detail"></aside>
-  <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
   <script src="models.js"></script>
   <script src="app.js"></script>
 </body>
