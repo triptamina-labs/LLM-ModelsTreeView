@@ -74,11 +74,67 @@
     };
   }
 
+  /* Layout circular: Transformer (raíz) al centro, el resto en anillos
+     concéntricos por profundidad (BFS). Cada generación en su radio. */
+  function circularPositions() {
+    var childMap = {};
+    models.forEach(function (m) {
+      (m.parents || []).forEach(function (p) {
+        (childMap[p] = childMap[p] || []).push(m.id);
+      });
+    });
+    var roots = models.filter(function (m) {
+      return !m.parents || !m.parents.length;
+    }).map(function (m) { return m.id; });
+
+    // BFS: profundidad = max(profundidad de parents)+1
+    var depth = {};
+    var queue = [];
+    roots.forEach(function (r) { depth[r] = 0; queue.push(r); });
+    var qi = 0;
+    while (qi < queue.length) {
+      var id = queue[qi++], d = depth[id];
+      (childMap[id] || []).forEach(function (c) {
+        if (depth[c] === undefined || d + 1 > depth[c]) {
+          depth[c] = d + 1; queue.push(c);
+        }
+      });
+    }
+
+    // agrupar por anillo
+    var rings = {};
+    models.forEach(function (m) {
+      (rings[depth[m.id]] = rings[depth[m.id]] || []).push(m.id);
+    });
+
+    var ringSpacing = 210, inner = 0, maxRing = 0;
+    Object.keys(rings).forEach(function (k) { maxRing = Math.max(maxRing, +k); });
+    var pos = {};
+    Object.keys(rings).forEach(function (ks) {
+      var d = +ks, ids = rings[ks];
+      var radius = inner + d * ringSpacing;
+      // cluster por empresa/nombre para agrupar familias
+      ids.sort(function (a, b) {
+        var A = byId[a], B = byId[b];
+        return (A.company + "|" + A.name).localeCompare(B.company + "|" + B.name);
+      });
+      var n = ids.length;
+      ids.forEach(function (id, i) {
+        var angle = -Math.PI / 2 + (2 * Math.PI * i) / n + (d % 2 ? Math.PI / n : 0);
+        pos[id] = { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius };
+      });
+    });
+    return pos;
+  }
+
   function buildNetwork() {
     var t = themeColors();
     nodesDS.clear();
     edgesDS.clear();
+    var pos = circularPositions();
     makeNodes().forEach(function (n) {
+      n.x = pos[n.id].x;
+      n.y = pos[n.id].y;
       n.font.color = t.text;
       nodesDS.add(n);
     });
@@ -86,22 +142,11 @@
 
     var options = {
       autoResize: true,
-      layout: {
-        hierarchical: {
-          enabled: true,
-          direction: "LR",
-          sortMethod: "directed",
-          levelSeparation: 240,
-          nodeSpacing: 130,
-          treeSpacing: 60,
-          blockShifting: true,
-          edgeMinimization: true
-        }
-      },
+      layout: { randomSeed: 2 },
       physics: false,
       interaction: { hover: true, tooltipDelay: 0 },
       nodes: { shape: "box" },
-      edges: { smooth: { enabled: true, type: "cubicBezier", forceDirection: "horizontal" } },
+      edges: { smooth: { enabled: true, type: "cubicBezier" } },
       groups: {}
     };
 
