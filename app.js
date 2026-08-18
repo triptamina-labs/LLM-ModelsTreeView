@@ -74,54 +74,90 @@
     };
   }
 
-  /* Layout circular: Transformer (raíz) al centro, el resto en anillos
-     concéntricos por profundidad (BFS). Cada generación en su radio. */
+  /* Layout circular por sectores: Transformer (raíz) al centro. Cada familia
+     top (hija directa de la raíz) ocupa su propia porción del círculo y crece
+     en anillos concéntricos dentro de ese sector — así los edges no cruzan
+     entre familias y el árbol queda ordenado, sin enredarse. */
   function circularPositions() {
     var childMap = {};
     models.forEach(function (m) {
-      (m.parents || []).forEach(function (p) {
-        (childMap[p] = childMap[p] || []).push(m.id);
-      });
+      (m.parents || []).forEach(function (p) { (childMap[p] = childMap[p] || []).push(m.id); });
     });
     var roots = models.filter(function (m) {
       return !m.parents || !m.parents.length;
     }).map(function (m) { return m.id; });
+    var rootSet = {};
+    roots.forEach(function (r) { rootSet[r] = true; });
 
-    // BFS: profundidad = max(profundidad de parents)+1
-    var depth = {};
-    var queue = [];
+    // branch = ancestro directo de raíz (familia top). "__ROOT__" para raíces.
+    function branchOf(id, memo) {
+      if (memo[id] !== undefined) return memo[id];
+      var m = byId[id];
+      if (!m.parents || !m.parents.length) { memo[id] = "__ROOT__"; return "__ROOT__"; }
+      var isRootChild = m.parents.some(function (p) { return rootSet[p]; });
+      if (isRootChild) { memo[id] = id; return id; }
+      memo[id] = branchOf(m.parents[0], memo);
+      return memo[id];
+    }
+
+    // profundidad (BFS)
+    var depth = {}, queue = [];
     roots.forEach(function (r) { depth[r] = 0; queue.push(r); });
     var qi = 0;
     while (qi < queue.length) {
       var id = queue[qi++], d = depth[id];
       (childMap[id] || []).forEach(function (c) {
-        if (depth[c] === undefined || d + 1 > depth[c]) {
-          depth[c] = d + 1; queue.push(c);
-        }
+        if (depth[c] === undefined || d + 1 > depth[c]) { depth[c] = d + 1; queue.push(c); }
       });
     }
 
-    // agrupar por anillo
-    var rings = {};
+    // sectores por familia, proporcionales a su cantidad de nodos
+    var brCounts = {}, nodesBranch = {};
     models.forEach(function (m) {
-      (rings[depth[m.id]] = rings[depth[m.id]] || []).push(m.id);
+      var b = branchOf(m.id, {});
+      nodesBranch[m.id] = b;
+      if (b !== "__ROOT__") brCounts[b] = (brCounts[b] || 0) + 1;
+    });
+    var brIds = Object.keys(brCounts).sort();
+    var total = brIds.reduce(function (s, b) { return s + brCounts[b]; }, 0) || 1;
+    var spans = {}, start = 0;
+    brIds.forEach(function (b) {
+      var frac = (brCounts[b] / total) * 2 * Math.PI;
+      spans[b] = { start: start, end: start + frac };
+      start += frac;
     });
 
-    var ringSpacing = 210, inner = 0, maxRing = 0;
-    Object.keys(rings).forEach(function (k) { maxRing = Math.max(maxRing, +k); });
-    var pos = {};
-    Object.keys(rings).forEach(function (ks) {
-      var d = +ks, ids = rings[ks];
-      var radius = inner + d * ringSpacing;
-      // cluster por empresa/nombre para agrupar familias
-      ids.sort(function (a, b) {
-        var A = byId[a], B = byId[b];
-        return (A.company + "|" + A.name).localeCompare(B.company + "|" + B.name);
+    var pos = {}, ringSpacing = 200;
+    roots.forEach(function (r) { pos[r] = { x: 0, y: 0 }; });
+
+    // preorden por rama para mantener cada linaje contiguo (menos cruces)
+    var seq = [];
+    function preorder(n, b) {
+      (childMap[n] || []).slice().sort().forEach(function (c) {
+        if (nodesBranch[c] === b) preorder(c, b);
       });
-      var n = ids.length;
+      seq.push(n);
+    }
+    brIds.forEach(function (b) { preorder(b, b); });
+    var posInSeq = {};
+    seq.forEach(function (id, i) { posInSeq[id] = i; });
+
+    // colocar nodos por (familia, profundidad), distribuidos en el sector
+    var depthNodes = {};
+    models.forEach(function (m) {
+      var b = nodesBranch[m.id];
+      if (b === "__ROOT__") return;
+      var k = b + "|" + depth[m.id];
+      (depthNodes[k] = depthNodes[k] || []).push(m.id);
+    });
+    Object.keys(depthNodes).forEach(function (k) {
+      var parts = k.split("|"), b = parts[0], d = +parts[1];
+      var ids = depthNodes[k].sort(function (a, c) { return posInSeq[a] - posInSeq[c]; });
+      var n = ids.length, span = spans[b];
       ids.forEach(function (id, i) {
-        var angle = -Math.PI / 2 + (2 * Math.PI * i) / n + (d % 2 ? Math.PI / n : 0);
-        pos[id] = { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius };
+        var radius = d * ringSpacing;
+        var ang = span.start + ((i + 0.5) / n) * (span.end - span.start);
+        pos[id] = { x: Math.cos(ang) * radius, y: Math.sin(ang) * radius };
       });
     });
     return pos;
