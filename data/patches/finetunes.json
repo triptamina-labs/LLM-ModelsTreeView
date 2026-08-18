@@ -1,0 +1,262 @@
+{
+  "companies": {
+    "NousResearch": { "color": "#E0218A" },
+    "Intel": { "color": "#0071C5" },
+    "Alibaba": { "color": "#FF6A00" },
+    "CognitiveComputations": { "color": "#8B4513" },
+    "Berkeley": { "color": "#003262" },
+    "OpenChat": { "color": "#2196F3" }
+  },
+  "models": [
+    {
+      "id": "mixtral",
+      "name": "Mixtral 8x7B",
+      "company": "Mistral",
+      "date": "2023-12",
+      "type": "Base",
+      "parents": ["mistral7b"],
+      "params": "46.7B",
+      "note": "Sparse MoE: 8 experts, 2 activos por token. Supera LLaMA 2 70B."
+    },
+    {
+      "id": "llama3",
+      "name": "LLaMA 3",
+      "company": "Meta",
+      "date": "2024-04",
+      "type": "Base",
+      "parents": ["transformer"],
+      "params": "70B",
+      "note": "Pretraining en 15T tokens, versiones 8B y 70B."
+    },
+    {
+      "id": "llama31",
+      "name": "LLaMA 3.1",
+      "company": "Meta",
+      "date": "2024-07",
+      "type": "Base",
+      "parents": ["llama3"],
+      "params": "405B",
+      "note": "Contexto 128K, 8 idiomas. Primera frontier-level open de 405B."
+    },
+    {
+      "id": "qwen1",
+      "name": "Qwen",
+      "company": "Alibaba",
+      "date": "2023-08",
+      "type": "Base",
+      "parents": ["transformer"],
+      "params": "7B",
+      "note": "Primer modelo base de la familia Qwen (Alibaba Cloud)."
+    },
+    {
+      "id": "gemma1",
+      "name": "Gemma",
+      "company": "Google",
+      "date": "2024-02",
+      "type": "Base",
+      "parents": ["transformer"],
+      "params": "7B",
+      "note": "Modelos ligeros (2B y 7B) derivados de Gemini."
+    },
+    {
+      "id": "wizardlm",
+      "name": "WizardLM",
+      "company": "Microsoft",
+      "date": "2023-05",
+      "type": "Instruct",
+      "parents": ["llama"],
+      "params": "7B",
+      "note": "Evol-Instruct: evolución automática de instrucciones simples a complejas."
+    },
+    {
+      "id": "koala",
+      "name": "Koala",
+      "company": "Berkeley",
+      "date": "2023-04",
+      "type": "Chat",
+      "parents": ["llama"],
+      "params": "13B",
+      "note": "Fine-tune con datos web y respuestas de ChatGPT (UC Berkeley BAIR)."
+    },
+    {
+      "id": "orca",
+      "name": "Orca",
+      "company": "Microsoft",
+      "date": "2023-06",
+      "type": "Instruct",
+      "parents": ["llama"],
+      "params": "13B",
+      "note": "Imitación de razonamiento paso a paso de GPT-4."
+    },
+    {
+      "id": "dolphin",
+      "name": "Dolphin",
+      "company": "CognitiveComputations",
+      "date": "2023-08",
+      "type": "Chat",
+      "parents": ["llama"],
+      "params": "7B",
+      "note": "Uncensored/uncorrupted, sin filtros de alineamiento. Eric Hartford."
+    },
+    {
+      "id": "nous_hermes1",
+      "name": "Nous-Hermes",
+      "company": "NousResearch",
+      "date": "2023-09",
+      "type": "Instruct",
+      "parents": ["llama"],
+      "params": "13B",
+      "note": "300K+ instrucciones custom, general-purpose. Teknium + Karan4D."
+    },
+    {
+      "id": "wizardlm70b",
+      "name": "WizardLM 70B",
+      "company": "Microsoft",
+      "date": "2023-09",
+      "type": "Instruct",
+      "parents": ["llama2"],
+      "params": "70B",
+      "note": "Evol-Instruct V2 sobre LLaMA 2 70B."
+    },
+    {
+      "id": "dolphin2",
+      "name": "Dolphin 2.0",
+      "company": "CognitiveComputations",
+      "date": "2023-09",
+      "type": "Chat",
+      "parents": ["llama2"],
+      "params": "13B",
+      "note": "Uncensored sobre LLaMA 2, más datos de alineamiento."
+    },
+    {
+      "id": "mistral7b_instruct",
+      "name": "Mistral 7B Instruct",
+      "company": "Mistral",
+      "date": "2023-09",
+      "type": "Instruct",
+      "parents": ["mistral7b"],
+      "params": "7B",
+      "note": "Primera versión instruct de Mistral 7B, liberada junto al base."
+    },
+    {
+      "id": "neural_chat",
+      "name": "Neural-Chat",
+      "company": "Intel",
+      "date": "2023-10",
+      "type": "Chat",
+      "parents": ["mistral7b"],
+      "params": "7B",
+      "note": "DPO sobre SlimOrca, optimizado para hardware Intel (Gaudi2)."
+    },
+    {
+      "id": "zephyr7b",
+      "name": "Zephyr 7B",
+      "company": "Hugging Face",
+      "date": "2023-11",
+      "type": "Instruct",
+      "parents": ["mistral7b"],
+      "params": "7B",
+      "note": "DPO con UltraFeedback, supera modelos más grandes en MT-Bench."
+    },
+    {
+      "id": "openchat",
+      "name": "OpenChat 3.5",
+      "company": "OpenChat",
+      "date": "2023-11",
+      "type": "Chat",
+      "parents": ["mistral7b"],
+      "params": "7B",
+      "note": "C-RLFT (reinforcement learning offline), supera ChatGPT Mar 2023."
+    },
+    {
+      "id": "openhermes25",
+      "name": "OpenHermes 2.5",
+      "company": "NousResearch",
+      "date": "2023-11",
+      "type": "Instruct",
+      "parents": ["mistral7b"],
+      "params": "7B",
+      "note": "~1M ejemplos GPT-4 + 100K código. Teknium (NousResearch)."
+    },
+    {
+      "id": "mixtral_instruct",
+      "name": "Mixtral Instruct",
+      "company": "Mistral",
+      "date": "2023-12",
+      "type": "Instruct",
+      "parents": ["mixtral"],
+      "params": "46.7B",
+      "note": "Versión instruct del MoE Mixtral 8x7B."
+    },
+    {
+      "id": "dolphin_mixtral",
+      "name": "Dolphin-Mixtral",
+      "company": "CognitiveComputations",
+      "date": "2024-01",
+      "type": "Chat",
+      "parents": ["mixtral"],
+      "params": "46.7B",
+      "note": "Uncensored sobre Mixtral. Datasets: Synthia, OpenHermes, PureDove."
+    },
+    {
+      "id": "qwen15_chat",
+      "name": "Qwen 1.5 Chat",
+      "company": "Alibaba",
+      "date": "2024-02",
+      "type": "Chat",
+      "parents": ["qwen1"],
+      "params": "7B",
+      "note": "Chat instruct multilingüe, mejorado sobre Qwen 1.0."
+    },
+    {
+      "id": "gemma1_instruct",
+      "name": "Gemma Instruct",
+      "company": "Google",
+      "date": "2024-02",
+      "type": "Instruct",
+      "parents": ["gemma1"],
+      "params": "7B",
+      "note": "Instruction-tuned oficial de Google para Gemma."
+    },
+    {
+      "id": "starling",
+      "name": "Starling LM 7B",
+      "company": "Berkeley",
+      "date": "2024-03",
+      "type": "Instruct",
+      "parents": ["openchat"],
+      "params": "7B",
+      "note": "RLAIF con reward model GPT-4, MT-Bench 8.09. UC Berkeley BAIR."
+    },
+    {
+      "id": "llama3_instruct",
+      "name": "Llama 3 Instruct",
+      "company": "Meta",
+      "date": "2024-04",
+      "type": "Instruct",
+      "parents": ["llama3"],
+      "params": "70B",
+      "note": "RLHF sobre LLaMA 3, versiones 8B y 70B."
+    },
+    {
+      "id": "llama31_instruct",
+      "name": "Llama 3.1 Instruct",
+      "company": "Meta",
+      "date": "2024-07",
+      "type": "Instruct",
+      "parents": ["llama31"],
+      "params": "405B",
+      "note": "Primera frontier-level open instruct de 405B, RLHF."
+    },
+    {
+      "id": "hermes3",
+      "name": "Hermes 3",
+      "company": "NousResearch",
+      "date": "2024-08",
+      "type": "Instruct",
+      "parents": ["llama31"],
+      "params": "405B",
+      "note": "Full-parameter fine-tuning de LLaMA 3.1, versiones 8B/70B/405B."
+    }
+  ]
+}
